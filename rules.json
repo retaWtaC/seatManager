@@ -1,0 +1,98 @@
+{
+    "rules": [
+        {
+            "id": 1,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [1, 8],
+                "rowRange": [1, 4]
+            }]
+        },
+        {
+            "id": 2,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [1, 8],
+                "rowRange": [1, 7]
+            }],
+			"C":[{
+				"isInverse": true,
+				"circle": [20, 8]
+			}]
+        },
+        {
+            "id": 3,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [5, 8],
+                "rowRange": [3, 7]
+            }]
+        },
+        {
+            "id": 4,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [1, 3],
+                "rowRange": [2, 4]
+            }]
+        },
+        {
+            "id": 5,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [3, 7],
+                "rowRange": [1, 6]
+            }]
+        },
+        {
+            "id": 6,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [6, 8],
+                "rowRange": [4, 7]
+            }]
+        },
+        {
+            "id": 7,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [2, 5],
+                "rowRange": [2, 5]
+            }]
+        },
+        {
+            "id": 8,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [1, 8],
+                "rowRange": [1, 7]
+            }]
+        },
+        {
+            "id": 9,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [4, 8],
+                "rowRange": [1, 3]
+            }]
+        },
+        {
+            "id": 10,
+            "diffGender": false,
+            "L":[{
+                "isInverse": false,
+                "columnRange": [1, 5],
+                "rowRange": [5, 7]
+            }]
+        }
+    ]
+}
