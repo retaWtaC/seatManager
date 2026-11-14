@@ -9,6 +9,7 @@
 // GUI 是 AI 写的,底层逻辑是我写的
 // 拖拽功能还有一些问题尚未实现
 // 规则有优先级
+// Git
 
 inline const std::string k_nameNotExist {"棍母"};
 
@@ -22,8 +23,17 @@ bool Point::operator!= (const Point& p) const
 	return (p.x != x || p.y != y);
 }
 
-Range::Range(bool isInverse)
-	:m_isInverse {isInverse}
+Range::Range()
+	:m_min {}
+	,m_max {}
+	,m_isInverse {false}
+{
+}
+
+Range::Range(int min, int max, bool isInverse)
+	:m_min {min}
+	,m_max {max}
+	,m_isInverse {isInverse}
 {
 }
 
@@ -73,14 +83,39 @@ bool Range::set(int min, int max, bool isInverse)
     }
 }
 
-int Range::getMax() const
+bool Range::setMin(int min)
 {
-	return m_max;
+	if (min > m_max)
+	{
+		return false;
+	}
+	m_min = min;
+	return true;
+}
+
+bool Range::setMax(int max)
+{
+	if (max < m_min)
+	{
+		return false;
+	}
+	m_max = max;
+	return true;
+}
+
+void Range::setIsInverse(bool isInverse)
+{
+	m_isInverse = isInverse;
 }
 
 int Range::getMin() const
 {
 	return m_min;
+}
+
+int Range::getMax() const
+{
+	return m_max;
 }
 
 bool Range::getIsInverse() const
@@ -100,8 +135,17 @@ bool Range::isInRange(int num) const
 	}
 }
 
-CRange::CRange(bool isInverse)
-    :m_isInverse {isInverse}
+CRange::CRange()
+    :m_p {}
+	,m_r {}
+	,m_isInverse {false}
+{
+}
+
+CRange::CRange(Point p, int r, bool isInverse)
+    :m_p {p}
+	,m_r {r}
+	,m_isInverse {isInverse}
 {
 }
 
@@ -148,6 +192,27 @@ bool CRange::set(Point p, int r, bool isInverse)
     m_isInverse = isInverse;
     
     return true;
+}
+
+bool CRange::setPoint(Point p)
+{
+	m_p = p;
+	return true;
+}
+
+bool CRange::setRadius(int r)
+{
+	if (r < 0)
+	{
+		return false;
+	}
+	m_r = r;
+	return true;
+}
+
+void CRange::setIsInverse(bool isInverse)
+{
+	m_isInverse = isInverse;
 }
 
 Point CRange::getPoint() const
@@ -600,7 +665,7 @@ bool StudentsList::deleteStudent(int id)
 	return true;
 }
 
-RulesList::RulesList(std::string& rJson)
+RulesList::RulesList(std::string rJson)
 	:m_rJson {rJson}
 	,m_rJsonLength {m_rJson[keyRules].GetArraySize()}
 	,m_rulesList (static_cast<size_t>(m_rJsonLength))
@@ -661,6 +726,7 @@ void RulesList::execute(StudentsList& students)
 {
 	for (int i {m_rJsonLength - 1}; i >= 0; --i)
 	{
+		m_rulesList[i].refresh(students);
 		if (!m_rulesList[i].isCoincide(students))
 		{
 			continue;
@@ -685,6 +751,16 @@ int RulesList::getIndex(int id) const
 	return index;
 }
 
+Rule RulesList::getRule(int index) const
+{
+	if (index < 0 || index > m_rJsonLength)
+	{
+		return Rule ();
+	}
+	
+	return m_rulesList[index];
+}
+
 const neb::CJsonObject& RulesList::getJson() const
 {
 	return m_rJson;
@@ -700,7 +776,7 @@ bool RulesList::addRule(Rule& rule)
 	int index {getIndex(id)};
 	
 	neb::CJsonObject newRule {};
-	newRule.Add(keyId, rule.getId());
+	newRule.Add(keyId, id);
 	newRule.Add(keyDiffGender, rule.getAllow());
 	
 	if (rule.getL())
@@ -726,7 +802,7 @@ bool RulesList::addRule(Rule& rule)
 		neb::CJsonObject newRule_C {};
 		newRule_C.Add(keyIsInverse, rule.getC_IsInverse());
 		newRule_C.AddEmptySubArray(keyCircle);
-		newRule_C[keyCircle].Add(id);
+		newRule_C[keyCircle].Add(rule.getCId());
 		newRule_C[keyCircle].Add(rule.getCRange().getRadius());
 		
 		newRule[keyC].Add(newRule_C);
@@ -779,6 +855,7 @@ bool RulesList::deleteRule(int id)
 Rule::Rule(neb::CJsonObject& rJson)
     :m_l {rJson.KeyExist(keyL)}
     ,m_c {rJson.KeyExist(keyC)}
+	,m_cId {}
 	// 无需在意这个奇怪的构造
     ,m_allowDiffGender {rJson.KeyExist(keyDiffGender)}
 {
@@ -795,8 +872,10 @@ Rule::Rule(neb::CJsonObject& rJson)
 }
 
 Rule::Rule()
-	:m_l {false}
+	:m_id {}
+	,m_l {false}
 	,m_c {false}
+	,m_cId {}
 	,m_allowDiffGender {false}
 {
 }
@@ -815,6 +894,7 @@ Rule& Rule::operator=(const Rule& rule)
     m_rowRange = rule.m_rowRange;
     m_c = rule.m_c;
 	m_c_isInverse = rule.m_c_isInverse;
+	m_cId = rule.m_cId;
     m_CRange = rule.m_CRange;
     m_allowDiffGender = rule.m_allowDiffGender;
 	
@@ -938,12 +1018,11 @@ bool Rule::setC(neb::CJsonObject& rJson, const StudentsList& students)
 			return false;
 		}
 		
-		int id {};
-		rJson[keyCircle].Get(0, id);
+		rJson[keyCircle].Get(0, m_cId);
 		int r {};
 		rJson[keyCircle].Get(1, r);
 		
-		Point p {students.getBoardPosition(id)};
+		Point p {students.getBoardPosition(m_cId)};
 		if (p == Point {0, 0})
 		{
 			return false;
@@ -960,6 +1039,46 @@ bool Rule::setC(neb::CJsonObject& rJson, const StudentsList& students)
     }
     
     return true;
+}
+
+bool Rule::set(int id, bool allowDiffGender, StudentsList& students)
+{
+	if (students.getStudentsIndex(id) == k_studentList_indexNotExist)
+	{
+		return false;
+	}
+	m_id = id;
+	m_allowDiffGender = allowDiffGender;
+	return true;
+}
+
+bool Rule::setL(Range columnRange, Range rowRange)
+{
+	if (columnRange.getIsInverse() != rowRange.getIsInverse())
+	{
+		return false;
+	}
+	
+	m_l = true;
+	m_l_isInverse = columnRange.getIsInverse();
+	m_columnRange = columnRange;
+	m_rowRange = rowRange;
+	
+	return true;
+}
+
+bool Rule::setC(CRange cRange, StudentsList& students)
+{
+	m_cId = students.getBoardId(cRange.getPoint());
+	if (m_cId == k_idReserver)
+	{
+		return false;
+	}
+	m_c = true;
+	m_c_isInverse = cRange.getIsInverse();
+	m_CRange = cRange;
+	
+	return true;
 }
 
 int Rule::getId() const
@@ -995,6 +1114,11 @@ Range Rule::getColumnRange() const
 Range Rule::getRowRange() const
 {
 	return m_rowRange;
+}
+
+int Rule::getCId() const
+{
+	return m_cId;
 }
 
 CRange Rule::getCRange() const
@@ -1039,6 +1163,23 @@ bool Rule::isCoincide(const StudentsList& students) const
 	else
 	{
 		return false;
+	}
+}
+
+void Rule::refresh(StudentsList& students)
+{
+	if (students.getStudentsIndex(m_id) == k_studentList_indexNotExist)
+	{
+		m_l = false;
+		m_c = false;
+	}
+	if (students.getStudentsIndex(m_cId) == k_studentList_indexNotExist)
+	{
+		m_c = false;
+	}
+	else
+	{
+		m_CRange.setPoint(students.getBoardPosition(m_cId));
 	}
 }
 

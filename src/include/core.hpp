@@ -24,6 +24,8 @@ constexpr int k_oJson_indexNotExist {-2};
 constexpr int k_rulesList_indexNotExist {-3};
 constexpr int k_idReserver {0};
 
+inline const std::string json_EmptyRule {"{\"id\":0,\"diffGender\":0"};
+
 inline const std::string keyStudents {"students"};
 inline const std::string keyHeight {"height"};
 inline const std::string keyGender {"gender"};
@@ -77,12 +79,18 @@ struct Point
 class Range
 {
 public:
-    Range(bool isInverse);
+    Range();
+    Range(int min, int max, bool isInverse);
 	Range& operator=(const Range& range);
-    bool set(neb::CJsonObject& oJson, bool isInverse);
+    
+	bool set(neb::CJsonObject& oJson, bool isInverse);
     bool set(int min, int max, bool isInverse);
-	int getMax() const;
+	bool setMin(int min);
+	bool setMax(int max);
+	void setIsInverse(bool isInverse);
+	
 	int getMin() const;
+	int getMax() const;
 	bool getIsInverse() const;
     bool isInRange(int num) const;
 
@@ -95,10 +103,16 @@ private:
 class CRange
 {
 public:
-    CRange(bool isInverse);
+    CRange();
+    CRange(Point p, int r, bool isInverse);
 	CRange& operator=(const CRange& range);
-    bool set(neb::CJsonObject& oJson, bool isInverse);
+    
+	bool set(neb::CJsonObject& oJson, bool isInverse);
     bool set(Point centralPoint, int r, bool isInverse);
+	bool setPoint(Point p);
+	bool setRadius(int r);
+	void setIsInverse(bool isInverse);
+	
 	Point getPoint() const;
 	int getRadius() const;
 	bool getIsInverse() const;
@@ -156,10 +170,16 @@ public:
 	
 	Rule& operator=(const Rule& rule);
 	
+	// 基于 Json 的方法
 	bool check(neb::CJsonObject& rJson, const StudentsList& students);
     bool set(neb::CJsonObject& rJson, const StudentsList& students);
     bool setL(neb::CJsonObject& rJson);
-    bool setC(neb::CJsonObject& rJson, const StudentsList& students);	
+    bool setC(neb::CJsonObject& rJson, const StudentsList& students);
+	
+	// 基于 Range 的方法
+	bool set(int id, bool allowDiffGender, StudentsList& students);
+	bool setL(Range columnRange, Range rowRange);
+	bool setC(CRange cRange, StudentsList& students);
 	
 	int getId() const;
 	bool getL_IsInverse() const;
@@ -168,10 +188,12 @@ public:
     bool getC() const;
 	Range getColumnRange() const;
 	Range getRowRange() const;
+	int getCId() const;
 	CRange getCRange() const;
 	bool getAllow() const;
 	
 	bool isCoincide(const StudentsList& students) const;
+	void refresh(StudentsList& students);
     void execute(StudentsList& students);
 
 private:
@@ -179,12 +201,13 @@ private:
     
     bool m_l;
 	bool m_l_isInverse {false};
-    Range m_columnRange {false};
-    Range m_rowRange {false};
+    Range m_columnRange {};
+    Range m_rowRange {};
     
     bool m_c;
 	bool m_c_isInverse {false};
-    CRange m_CRange {false};
+	int m_cId;
+    CRange m_CRange {};
     
     bool m_allowDiffGender;
 };
@@ -192,12 +215,13 @@ private:
 class RulesList
 {
 public:
-	RulesList(std::string& rJson);
+	RulesList(std::string rJson);
 	bool check(neb::CJsonObject& rJson);
 	bool set(const StudentsList& students);
 	void execute(StudentsList& students);
 	
 	int getIndex(int id) const;
+	Rule getRule(int index) const;
 	const neb::CJsonObject& getJson() const;
 	
 	bool addRule(Rule& rule);
