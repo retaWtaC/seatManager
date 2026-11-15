@@ -9,7 +9,7 @@
 // GUI 是 AI 写的,底层逻辑是我写的
 // 拖拽功能还有一些问题尚未实现
 // 规则有优先级
-// Git
+// Git 已经添加
 
 inline const std::string k_nameNotExist {"棍母"};
 
@@ -35,6 +35,10 @@ Range::Range(int min, int max, bool isInverse)
 	,m_max {max}
 	,m_isInverse {isInverse}
 {
+	if (m_min > m_max)
+	{
+		std::swap(m_min, m_max);
+	}
 }
 
 Range& Range::operator=(const Range& range)
@@ -270,7 +274,7 @@ StudentsList::StudentsList(std::string oJson)
 {
     for (int i {}; i < m_oJsonLength; i++)
     {
-        Data temp {};
+        Student temp {};
         m_oJson[keyStudents][i].Get(keyId,temp.id);
         m_oJson[keyStudents][i].Get(keyHeight,temp.height);
         m_oJson[keyStudents][i].Get(keyGender,temp.gender);
@@ -374,7 +378,9 @@ void StudentsList::seatSort()
 {
     m_peopleNum = 0;
 	m_index = -1;
-	    
+	m_emptyId = -1;
+	m_board = std::vector<int> (k_peopleNum);
+	
 	while (m_peopleNum < m_oJsonLength && m_index + 1 < k_peopleNum)
     {
 		bool isFound {false};
@@ -417,9 +423,17 @@ void StudentsList::seatSort()
         }
     }
 	
-	for (Data& student : m_students)
+	for (Student& student : m_students)
 	{
 		student.isSelected = false;
+	}
+	
+	for (int i {}; i < k_peopleNum; ++i)
+	{
+		if (m_board[i] == 0)
+		{
+			m_board[i] = m_emptyId--;
+		}
 	}
 }
 
@@ -444,7 +458,7 @@ void StudentsList::swapSeats(int index1, int index2)
 int StudentsList::getBoardId(Point point) const
 {
     int index {(point.y - 1) * k_columnNum + (point.x - 1)};
-    if (index < 0 || index > m_index)
+    if (index < 0 || index > k_peopleNum)
     {
         return k_idReserver;
     }
@@ -485,7 +499,7 @@ int StudentsList::getBoardIndex(int id) const
 		return k_board_indexNotExist;
 	}
 	
-	for(int i {}; i <= m_index; i++)
+	for(int i {}; i <= k_peopleNum; i++)
     {
         if (m_board[i] == id)
         {
@@ -549,7 +563,12 @@ int StudentsList::getStudentsIndex(int id) const
 	return k_studentList_indexNotExist;
 }
 
-int StudentsList::getJsonIndex(int id)
+int StudentsList::getStudentsNum() const
+{
+	return m_oJsonLength;
+}
+
+int StudentsList::getJsonIndex(int id) const
 {
     int temp {};
     for (int i {}; i < m_oJsonLength; i++)
@@ -570,7 +589,7 @@ const neb::CJsonObject& StudentsList::getJson() const
 	return m_oJson;
 }
 
-bool StudentsList::addStudent(Data student)
+bool StudentsList::addStudent(Student student)
 {
     if (student.id == k_idReserver)
 	{
@@ -614,6 +633,10 @@ bool StudentsList::addStudent(Data student)
 		m_students[index] = student;
     }
     
+	// 变化后要重排
+	heightSort();
+	seatSort();
+	
     return true;
 }
 bool StudentsList::deleteStudent(int id)
@@ -652,15 +675,18 @@ bool StudentsList::deleteStudent(int id)
         m_oJsonLength = m_oJson[keyStudents].GetArraySize();
     }
 	
-	int board_index {getBoardIndex(id)};
-	if (board_index == k_board_indexNotExist)
-	{
-		return false;
-	}
-	else
-	{
-		m_board[board_index] = m_emptyId--;
-	}
+	// int board_index {getBoardIndex(id)};
+	// if (board_index == k_board_indexNotExist)
+	// {
+		// return false;
+	// }
+	// else
+	// {
+		// m_board[board_index] = m_emptyId--;
+	// }
+	// 删除后要重排
+	heightSort();
+	seatSort();
     
 	return true;
 }
@@ -749,6 +775,11 @@ int RulesList::getIndex(int id) const
 	}
 	
 	return index;
+}
+
+int RulesList::getRulesNum() const
+{
+	return m_rJsonLength;
 }
 
 Rule RulesList::getRule(int index) const
@@ -920,11 +951,6 @@ bool Rule::check(neb::CJsonObject& rJson, const StudentsList& students)
 	bool l {rJson.KeyExist(keyL)};
 	bool c {rJson.KeyExist(keyC)};
 	
-	if (!l && !c)
-	{
-		return false;
-	}
-	
 	if (l)
 	{
 		if (rJson[keyL].GetArraySize() < 1)
@@ -1041,7 +1067,7 @@ bool Rule::setC(neb::CJsonObject& rJson, const StudentsList& students)
     return true;
 }
 
-bool Rule::set(int id, bool allowDiffGender, StudentsList& students)
+bool Rule::set(int id, bool allowDiffGender, const StudentsList& students)
 {
 	if (students.getStudentsIndex(id) == k_studentList_indexNotExist)
 	{
@@ -1067,7 +1093,7 @@ bool Rule::setL(Range columnRange, Range rowRange)
 	return true;
 }
 
-bool Rule::setC(CRange cRange, StudentsList& students)
+bool Rule::setC(CRange cRange, const StudentsList& students)
 {
 	m_cId = students.getBoardId(cRange.getPoint());
 	if (m_cId == k_idReserver)
@@ -1166,7 +1192,7 @@ bool Rule::isCoincide(const StudentsList& students) const
 	}
 }
 
-void Rule::refresh(StudentsList& students)
+void Rule::refresh(const StudentsList& students)
 {
 	if (students.getStudentsIndex(m_id) == k_studentList_indexNotExist)
 	{
@@ -1188,6 +1214,7 @@ void Rule::execute(StudentsList& students)
 	Point point {};
     int tempId {};
     bool isFound {false};
+	refresh(students);
 	
     for (int tryNum {}; tryNum < 1000; ++tryNum)
     {
@@ -1248,106 +1275,117 @@ void Rule::execute(StudentsList& students)
 }
     
 
-Main::Main(std::string oJson, std::string rJson)
+SeatManager::SeatManager(std::string oJson, std::string rJson)
 :m_students (oJson)
 ,m_rules (rJson)
 {
-	if (m_students.check())
-	{
-		m_students.heightSort();
-		m_students.seatSort();
-	}
-	else
-	{
-		m_error(Error::studentJsonWrong);
-	}
 }
 
-bool Main::main()
-{            
-    ++cnt;
-	if (cnt == 1)
+bool SeatManager::main()
+{
+	if (!m_students.check())
 	{
-		if (!m_rules.set(m_students))
-		{
-			return false;
-		}
+		m_error(Error::studentJsonWrong);
+		return false;
+	}         
+	if (!m_rules.set(m_students))
+	{
+		m_error(Error::ruleJsonWrong);
+		return false;
 	}
-	m_rules.execute(m_students);
     return true;
 }
 
-void Main::execute()
+void SeatManager::execute()
 {
+	m_students.heightSort();
+	m_students.seatSort();
 	m_rules.execute(m_students);
 }
-
-int Main::getId(Point point) const
-{
-    return m_students.getBoardId(point);
-}
-
-const std::string& Main::getName(Point point) const
-{
-    int id {m_students.getBoardId(point)};
-    return m_students.getName(id);
-}
-
-int Main::getGender(Point point) const
-{
-	int id {m_students.getBoardId(point)};
-	return m_students.getGender(id);
-}
-
-int Main::getHeight(Point point) const
-{
-	int id {m_students.getBoardId(point)};
-	return m_students.getHeight(id);
-}
-
-void Main::swapSeats(Point a, Point b)
+void SeatManager::swapSeats(Point a, Point b)
 {
 	int index1 {m_students.getBoardIndex(m_students.getBoardId(a))};
 	int index2 {m_students.getBoardIndex(m_students.getBoardId(b))};
 	m_students.swapSeats(index1, index2);
 }
 
-const neb::CJsonObject& Main::getStudentsJson() const
+int SeatManager::getId(Point point) const
+{
+    return m_students.getBoardId(point);
+}
+
+const std::string& SeatManager::getName(Point point) const
+{
+    int id {m_students.getBoardId(point)};
+    return m_students.getName(id);
+}
+
+int SeatManager::getGender(Point point) const
+{
+	int id {m_students.getBoardId(point)};
+	return m_students.getGender(id);
+}
+
+int SeatManager::getHeight(Point point) const
+{
+	int id {m_students.getBoardId(point)};
+	return m_students.getHeight(id);
+}
+
+const StudentsList& SeatManager::getStudentsList() const
+{
+	return m_students;
+}
+
+const neb::CJsonObject& SeatManager::getStudentsJson() const
 {
 	return m_students.getJson();
 }
 
-const neb::CJsonObject& Main::getRulesJson() const
+int SeatManager::getRuleIndex(int id) const
+{
+	return m_rules.getIndex(id);
+}
+
+Rule SeatManager::getRule(int index) const
+{
+	return m_rules.getRule(index);
+}
+
+const RulesList& SeatManager::getRulesList() const
+{
+	return m_rules;
+}
+
+const neb::CJsonObject& SeatManager::getRulesJson() const
 {
 	return m_rules.getJson();
 }
 
-bool Main::addStudent(Data student)
+bool SeatManager::addStudent(Student student)
 {
 	return m_students.addStudent(student);
 }
 
-bool Main::deleteStudent(int id)
+bool SeatManager::deleteStudent(int id)
 {
 	return m_students.deleteStudent(id);
 }
 
-void Main::m_error(Error e)
+bool SeatManager::addRule(Rule rule)
+{
+	return m_rules.addRule(rule);
+}
+
+bool SeatManager::deleteRule(int id)
+{
+	return m_rules.deleteRule(id);
+}
+
+void SeatManager::m_error(Error e)
 {
     switch(e)
     {
-        case Error::rangeNotCoincide:
-            std::cout << error_rangeNotCoincide;
-            break;
-		case Error::keyNotExist:
-            std::cout << error_keyNotExist;
-            break;
-        case Error::setLineFailed:
-            std::cout << error_setLineFailed;
-            break;
-        case Error::setCircleFailed:
-            std::cout << error_setCircleFailed;
-            break;
 		case Error::studentJsonWrong:
             std::cout << error_studentJsonWrong;
             break;

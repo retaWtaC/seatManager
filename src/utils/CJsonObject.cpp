@@ -290,6 +290,49 @@ CJsonObject& CJsonObject::operator[](const std::string& strKey)
     }
 }
 
+const CJsonObject& CJsonObject::operator[](const std::string& strKey) const
+{
+#if __cplusplus < 201101L
+    std::map<std::string, CJsonObject*>::iterator iter = m_mapJsonObjectRef.find(strKey);
+#else
+    auto iter = m_mapJsonObjectRef.find(strKey);
+#endif
+    if (iter == m_mapJsonObjectRef.end())
+    {
+        cJSON* pJsonStruct = NULL;
+        if (m_pJsonData != NULL)
+        {
+            if (m_pJsonData->type == cJSON_Object)
+            {
+                pJsonStruct = cJSON_GetObjectItem(m_pJsonData, strKey.c_str());
+            }
+        }
+        else if (m_pExternJsonDataRef != NULL)
+        {
+            if (m_pExternJsonDataRef->type == cJSON_Object)
+            {
+                pJsonStruct = cJSON_GetObjectItem(m_pExternJsonDataRef, strKey.c_str());
+            }
+        }
+
+        CJsonObject* pJsonObject = NULL;
+        if (pJsonStruct == NULL)
+        {
+            pJsonObject = new CJsonObject();
+        }
+        else
+        {
+            pJsonObject = new CJsonObject(pJsonStruct);
+        }
+        m_mapJsonObjectRef.insert(std::pair<std::string, CJsonObject*>(strKey, pJsonObject));
+        return(*pJsonObject);
+    }
+    else
+    {
+        return(*(iter->second));
+    }
+}
+
 CJsonObject& CJsonObject::operator[](unsigned int uiWhich)
 {
 #if __cplusplus < 201101L
@@ -326,6 +369,49 @@ CJsonObject& CJsonObject::operator[](unsigned int uiWhich)
             m_mapJsonArrayRef.insert(std::pair<unsigned int, CJsonObject*>(uiWhich, pJsonObject));
             return(*pJsonObject);
         }
+    }
+    else
+    {
+        return(*(iter->second));
+    }
+}
+
+const CJsonObject& CJsonObject::operator[](unsigned int uiWhich) const
+{
+#if __cplusplus < 201101L
+    std::map<unsigned int, CJsonObject*>::iterator iter = m_mapJsonArrayRef.find(uiWhich);
+#else
+    auto iter = m_mapJsonArrayRef.find(uiWhich);
+#endif
+    if (iter == m_mapJsonArrayRef.end())
+    {
+        cJSON* pJsonStruct = NULL;
+        if (m_pJsonData != NULL)
+        {
+            if (m_pJsonData->type == cJSON_Array)
+            {
+                pJsonStruct = cJSON_GetArrayItem(m_pJsonData, uiWhich);
+            }
+        }
+        else if (m_pExternJsonDataRef != NULL)
+        {
+            if (m_pExternJsonDataRef->type == cJSON_Array)
+            {
+                pJsonStruct = cJSON_GetArrayItem(m_pExternJsonDataRef, uiWhich);
+            }
+        }
+
+        CJsonObject* pJsonObject = NULL;
+        if (pJsonStruct == NULL)
+        {
+            pJsonObject = new CJsonObject();
+        }
+        else
+        {
+            pJsonObject = new CJsonObject(pJsonStruct);
+        }
+        m_mapJsonArrayRef.insert(std::pair<unsigned int, CJsonObject*>(uiWhich, pJsonObject));
+        return(*pJsonObject);
     }
     else
     {

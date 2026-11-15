@@ -24,7 +24,8 @@ constexpr int k_oJson_indexNotExist {-2};
 constexpr int k_rulesList_indexNotExist {-3};
 constexpr int k_idReserver {0};
 
-inline const std::string json_EmptyRule {"{\"id\":0,\"diffGender\":0"};
+inline const std::string k_studentsJson {"{\"students\": []}"};
+inline const std::string k_rulesJson {"{\"rules\": []}"};
 
 inline const std::string keyStudents {"students"};
 inline const std::string keyHeight {"height"};
@@ -41,24 +42,16 @@ inline const std::string keyRow {"rowRange"};
 inline const std::string keyC {"C"};
 inline const std::string keyCircle {"circle"};
 
-inline const std::string error_rangeNotCoincide {"范围无效\n"};
-inline const std::string error_keyNotExist {"键不存在\n"};
-inline const std::string error_setLineFailed {"行列范围设置失败\n"};
-inline const std::string error_setCircleFailed {"圆形范围设置失败\n"};
 inline const std::string error_studentJsonWrong {"学生信息错误\n"};
 inline const std::string error_ruleJsonWrong {"规则信息错误\n"};
 
 enum class Error
 {
-    rangeNotCoincide,
-	keyNotExist,
-    setLineFailed,
-    setCircleFailed,
 	studentJsonWrong,
 	ruleJsonWrong,
 };
 
-struct Data
+struct Student
 {
     int id {k_idReserver};
     int height {k_defaultHeight};
@@ -143,18 +136,19 @@ public:
 	int getGender(int id) const;
 	int getHeight(int id) const;
 	int getStudentsIndex(int id) const;
+	int getStudentsNum() const;
     //操作 m_oJson:
-	int getJsonIndex(int id);
+	int getJsonIndex(int id) const;
 	const neb::CJsonObject& getJson() const;
 
 public:
-    bool addStudent(Data student);
+    bool addStudent(Student student);
     bool deleteStudent(int id);
 
 private:
     neb::CJsonObject m_oJson;
     int m_oJsonLength;
-    std::vector<Data> m_students;
+    std::vector<Student> m_students;
     
     int m_index {-1};
     int m_peopleNum {0};
@@ -177,9 +171,9 @@ public:
     bool setC(neb::CJsonObject& rJson, const StudentsList& students);
 	
 	// 基于 Range 的方法
-	bool set(int id, bool allowDiffGender, StudentsList& students);
+	bool set(int id, bool allowDiffGender, const StudentsList& students);
 	bool setL(Range columnRange, Range rowRange);
-	bool setC(CRange cRange, StudentsList& students);
+	bool setC(CRange cRange, const StudentsList& students);
 	
 	int getId() const;
 	bool getL_IsInverse() const;
@@ -193,7 +187,7 @@ public:
 	bool getAllow() const;
 	
 	bool isCoincide(const StudentsList& students) const;
-	void refresh(StudentsList& students);
+	void refresh(const StudentsList& students);
     void execute(StudentsList& students);
 
 private:
@@ -221,6 +215,7 @@ public:
 	void execute(StudentsList& students);
 	
 	int getIndex(int id) const;
+	int getRulesNum() const;
 	Rule getRule(int index) const;
 	const neb::CJsonObject& getJson() const;
 	
@@ -234,24 +229,30 @@ private:
 	std::vector<Rule> m_rulesList;
 };
 
-class Main
+class SeatManager
 {
 public:
-    Main(std::string oJson, std::string rJson);
+    SeatManager(std::string oJson, std::string rJson);
     bool main();
 	void execute();
+	void swapSeats(Point a, Point b);
 	
 	int getId(Point point) const;
     const std::string& getName(Point point) const;
 	int getGender(Point point) const;
 	int getHeight(Point point) const;
-	void swapSeats(Point a, Point b);
-	
+	const StudentsList& getStudentsList() const;
 	const neb::CJsonObject& getStudentsJson() const;
+	
+	int getRuleIndex(int id) const;
+	Rule getRule(int index) const;
+	const RulesList& getRulesList() const;
 	const neb::CJsonObject& getRulesJson() const;
 	
-	bool addStudent(Data student);
+	bool addStudent(Student student);
 	bool deleteStudent(int id);
+	bool addRule(Rule rule);
+	bool deleteRule(int id);
 
 private:
     void m_error(Error e);

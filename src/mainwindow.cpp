@@ -625,17 +625,18 @@ void MainWindow::onRun()
 
     log(QStringLiteral("开始执行排座..."));
 
-    // Main 只在执行排座时临时构造；捕获它（以及 Rule::execute）写到 std::cout 的内容
+    // SeatManager 只在执行排座时临时构造；捕获它（以及 Rule::execute）写到 std::cout 的内容
     std::ostringstream captured;
-    std::unique_ptr<Main> engine;
+    std::unique_ptr<SeatManager> engine;
     bool ok = false;
     QString runError;
 
     {
         CoutRedirectGuard guard(captured);
         try {
-            engine = std::make_unique<Main>(buildStudentsJson(), m_rulesObj.ToFormattedString());
+            engine = std::make_unique<SeatManager>(buildStudentsJson(), m_rulesObj.ToFormattedString());
             ok = engine->main();
+			engine->execute();
         } catch (const std::exception& e) {
             runError = QString::fromUtf8(e.what());
         } catch (...) {
@@ -656,7 +657,7 @@ void MainWindow::onRun()
     if (!ok) {
         showError(QStringLiteral("排座失败"),
                   capturedText.isEmpty()
-                      ? QStringLiteral("Main::main() 返回 false，详见日志。")
+                      ? QStringLiteral("SeatManager::main() 返回 false，详见日志。")
                       : capturedText);
         return;
     }
