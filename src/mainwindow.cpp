@@ -13,19 +13,21 @@
 #include <QFileDialog>
 #include <QHBoxLayout>
 #include <QHeaderView>
+#include <QKeySequence>
 #include <QLabel>
 #include <QListWidget>
 #include <QMenu>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPoint>
+#include <QPushButton>
 #include <QScrollBar>
 #include <QSet>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QStringList>
 #include <QTableWidgetItem>
-#include <QToolBar>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -63,8 +65,8 @@ private:
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
-    // 规则根对象先建立 { "rules": [] }
-    m_rulesObj.AddEmptySubArray(keyRules);
+    // 空规则列表直接使用 core 提供的常量
+    m_rulesObj = neb::CJsonObject(k_rulesJson);
     buildUi();
     log(QStringLiteral("就绪：添加/加载学生与规则后，点击“执行排座”。"));
 }
@@ -76,45 +78,72 @@ void MainWindow::buildUi()
     setWindowTitle(QStringLiteral("排座系统"));
     resize(1100, 720);
 
-    // ---- 工具栏 ----
-    auto* tb = addToolBar(QStringLiteral("操作"));
-    tb->setMovable(false);
+    // ---- 顶部菜单：文件 / 编辑 / 视图 ----
+    auto* fileMenu = menuBar()->addMenu(QStringLiteral("文件"));
 
-    auto* newStudentsAct = tb->addAction(QStringLiteral("新建学生"));
+    auto* newStudentsAct = fileMenu->addAction(QStringLiteral("新建学生列表"));
+    newStudentsAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+N")));
     connect(newStudentsAct, &QAction::triggered, this, &MainWindow::onNewStudents);
 
-    auto* newRulesAct = tb->addAction(QStringLiteral("新建规则"));
+    auto* newRulesAct = fileMenu->addAction(QStringLiteral("新建规则列表"));
+    newRulesAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+N")));
     connect(newRulesAct, &QAction::triggered, this, &MainWindow::onNewRules);
 
-    auto* loadStudentsAct = tb->addAction(QStringLiteral("加载学生"));
+    fileMenu->addSeparator();
+
+    auto* loadStudentsAct = fileMenu->addAction(QStringLiteral("加载学生..."));
+    loadStudentsAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+O")));
     connect(loadStudentsAct, &QAction::triggered, this, &MainWindow::onLoadStudents);
 
-    auto* loadRulesAct = tb->addAction(QStringLiteral("加载规则"));
+    auto* loadRulesAct = fileMenu->addAction(QStringLiteral("加载规则..."));
+    loadRulesAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+O")));
     connect(loadRulesAct, &QAction::triggered, this, &MainWindow::onLoadRules);
 
-    auto* saveStudentsAct = tb->addAction(QStringLiteral("保存学生"));
+    fileMenu->addSeparator();
+
+    auto* saveStudentsAct = fileMenu->addAction(QStringLiteral("保存学生..."));
+    saveStudentsAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+S")));
     connect(saveStudentsAct, &QAction::triggered, this, &MainWindow::onSaveStudents);
 
-    auto* saveRulesAct = tb->addAction(QStringLiteral("保存规则"));
+    auto* saveRulesAct = fileMenu->addAction(QStringLiteral("保存规则..."));
+    saveRulesAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+Shift+S")));
     connect(saveRulesAct, &QAction::triggered, this, &MainWindow::onSaveRules);
 
-    tb->addSeparator();
+    fileMenu->addSeparator();
 
-    auto* addStudentAct = tb->addAction(QStringLiteral("添加学生"));
+    auto* quitAct = fileMenu->addAction(QStringLiteral("退出"));
+    quitAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+Q")));
+    connect(quitAct, &QAction::triggered, this, [this]() { close(); });
+
+    auto* editMenu = menuBar()->addMenu(QStringLiteral("编辑"));
+
+    auto* addStudentAct = editMenu->addAction(QStringLiteral("添加学生..."));
+    addStudentAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+Alt+N")));
     connect(addStudentAct, &QAction::triggered, this, &MainWindow::onAddStudent);
 
-    auto* addRuleAct = tb->addAction(QStringLiteral("添加规则"));
+    auto* addRuleAct = editMenu->addAction(QStringLiteral("添加规则..."));
+    addRuleAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+Alt+R")));
     connect(addRuleAct, &QAction::triggered, this, &MainWindow::onAddRule);
 
-    tb->addSeparator();
+    editMenu->addSeparator();
 
-    auto* runAct = tb->addAction(QStringLiteral("执行排座"));
+    auto* runAct = editMenu->addAction(QStringLiteral("执行排座"));
+    runAct->setShortcut(QKeySequence(QStringLiteral("F5")));
     connect(runAct, &QAction::triggered, this, &MainWindow::onRun);
 
-    m_showIdAction = tb->addAction(QStringLiteral("显示 id"));
+    auto* viewMenu = menuBar()->addMenu(QStringLiteral("视图"));
+
+    m_showIdAction = viewMenu->addAction(QStringLiteral("显示 id"));
     m_showIdAction->setCheckable(true);
     m_showIdAction->setChecked(true);
+    m_showIdAction->setShortcut(QKeySequence(QStringLiteral("Ctrl+I")));
     connect(m_showIdAction, &QAction::toggled, this, &MainWindow::onToggleShowId);
+
+    viewMenu->addSeparator();
+
+    auto* clearLogAct = viewMenu->addAction(QStringLiteral("清空日志"));
+    clearLogAct->setShortcut(QKeySequence(QStringLiteral("Ctrl+L")));
+    connect(clearLogAct, &QAction::triggered, this, &MainWindow::onClearLog);
 
     // ---- 中央布局：左座位表，右规则列表 + 日志 ----
     auto* central = new QWidget(this);
@@ -160,7 +189,16 @@ void MainWindow::buildUi()
     connect(m_ruleList, &QWidget::customContextMenuRequested, this, &MainWindow::onRuleContextMenu);
     rightLayout->addWidget(m_ruleList, 1);
 
-    rightLayout->addWidget(new QLabel(QStringLiteral("日志"), right));
+    auto* logHeader = new QHBoxLayout;
+    logHeader->setContentsMargins(0, 0, 0, 0);
+    logHeader->addWidget(new QLabel(QStringLiteral("日志"), right));
+    logHeader->addStretch(1);
+    auto* clearLogButton = new QPushButton(QStringLiteral("清空"), right);
+    clearLogButton->setToolTip(QStringLiteral("清空日志区"));
+    connect(clearLogButton, &QPushButton::clicked, this, &MainWindow::onClearLog);
+    logHeader->addWidget(clearLogButton);
+    rightLayout->addLayout(logHeader);
+
     m_log = new QPlainTextEdit(right);
     m_log->setReadOnly(true);
     rightLayout->addWidget(m_log, 1);
@@ -338,8 +376,8 @@ void MainWindow::onNewStudents()
 
 void MainWindow::onNewRules()
 {
-    m_rulesObj.Clear();
-    m_rulesObj.AddEmptySubArray(keyRules);
+    // core 已提供空规则 JSON 常量
+    m_rulesObj = neb::CJsonObject(k_rulesJson);
     m_ruleList->clear();
     updateStatus();
 
@@ -625,7 +663,7 @@ void MainWindow::onRun()
 
     log(QStringLiteral("开始执行排座..."));
 
-    // SeatManager 只在执行排座时临时构造；捕获它（以及 Rule::execute）写到 std::cout 的内容
+    // SeatManager 只构造一次：先 main() 校验，成功后再 execute() 排座
     std::ostringstream captured;
     std::unique_ptr<SeatManager> engine;
     bool ok = false;
@@ -636,7 +674,9 @@ void MainWindow::onRun()
         try {
             engine = std::make_unique<SeatManager>(buildStudentsJson(), m_rulesObj.ToFormattedString());
             ok = engine->main();
-			engine->execute();
+            if (ok) {
+                engine->execute();
+            }
         } catch (const std::exception& e) {
             runError = QString::fromUtf8(e.what());
         } catch (...) {
@@ -811,6 +851,14 @@ void MainWindow::onToggleShowId(bool checked)
 {
     m_showId = checked;
     renderBoard();
+}
+
+void MainWindow::onClearLog()
+{
+    if (m_log) {
+        m_log->clear();
+    }
+    statusBar()->showMessage(QStringLiteral("日志已清空"), 3000);
 }
 
 void MainWindow::editStudentAt(int row, int col)
@@ -1004,7 +1052,11 @@ int MainWindow::ruleCount()
 
 std::string MainWindow::buildStudentsJson() const
 {
-    // 存盘与排座共用：从 m_students 重新拼 {"students":[...]}
+    // 空列表使用 core 提供的常量；排座和存盘共用
+    if (m_students.empty()) {
+        return k_studentsJson;
+    }
+
     neb::CJsonObject root;
     root.AddEmptySubArray(keyStudents);
 

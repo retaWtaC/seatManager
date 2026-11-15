@@ -2,6 +2,8 @@
 
 #include <QTableWidget>
 
+class QDragEnterEvent;
+class QDragMoveEvent;
 class QDropEvent;
 
 // 座位表：只处理“单元格 -> 单元格”的拖拽交换。
@@ -19,5 +21,12 @@ signals:
 
 protected:
     void startDrag(Qt::DropActions supportedActions) override;
+    void dragEnterEvent(QDragEnterEvent* event) override;
+    void dragMoveEvent(QDragMoveEvent* event) override;
     void dropEvent(QDropEvent* event) override;
+
+private:
+    // 记录真正开始拖拽的源单元格，避免 drop 时 currentItem 已被改变
+    int m_dragRow = -1;
+    int m_dragCol = -1;
 };

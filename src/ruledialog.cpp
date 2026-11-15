@@ -303,7 +303,7 @@ void RuleDialog::onAccept()
         }
     }
 
-    // 学生 id 不存在时给出提示，但仍允许保存；Main::main 的 rule.check 会再次校验
+    // 学生 id 不存在时给出提示，但仍允许保存；SeatManager::main 会再次校验
     if (m_validateIds) {
         QStringList warnings;
         if (!m_validIds.contains(m_id->value())) {

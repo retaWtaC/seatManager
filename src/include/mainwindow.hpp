@@ -17,7 +17,7 @@ class QAction;
 class QPoint;
 
 // 主窗口：长期持有学生、规则与座位三份数据。
-// Main 只在“执行排座”时临时构造，避免结果随 Main 析构丢失。
+// SeatManager 只在“执行排座”时构造一次，先 main() 校验，再 execute() 排座。
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -39,13 +39,14 @@ private slots:
     void onSaveRules();
     void onAddRule();
 
-    // 排座 / 座位表
+    // 排座 / 座位表 / 日志
     void onRun();
     void onCellClicked(int row, int col);
     void onCellDoubleClicked(int row, int col);
     void onTableContextMenu(const QPoint& pos);
     void onDragDrop(int fromRow, int fromCol, int toRow, int toCol);
     void onToggleShowId(bool checked);
+    void onClearLog();
 
     // 规则列表
     void onRuleDoubleClicked(QListWidgetItem* item);

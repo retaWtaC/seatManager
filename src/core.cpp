@@ -439,9 +439,8 @@ void StudentsList::seatSort()
 
 void StudentsList::swap(int id1, int id2)
 {
-    int index1 {getBoardIndex(id1)};
+	int index1 {getBoardIndex(id1)};
     int index2 {getBoardIndex(id2)};
-	
 	swapSeats(index1, index2);
 }
 
@@ -499,14 +498,16 @@ int StudentsList::getBoardIndex(int id) const
 		return k_board_indexNotExist;
 	}
 	
-	for(int i {}; i <= k_peopleNum; i++)
+	for(int i {}; i < k_peopleNum; i++)
     {
         if (m_board[i] == id)
         {
-            return i;
+            // std::cout << "Yes\n";
+			return i;
         }
     }
     
+	// std::cout << "No\n";
     return k_board_indexNotExist;
 }
 
@@ -1217,16 +1218,17 @@ void Rule::execute(StudentsList& students)
 	refresh(students);
 	
     for (int tryNum {}; tryNum < 1000; ++tryNum)
+	// while (true)
     {
 		point.x = Random::getRandom(1, k_columnNum);
         point.y = Random::getRandom(1, k_rowNum);
         tempId = students.getBoardId(point);
 		
-		if (tempId <= k_idReserver)
+		if (tempId == k_idReserver)
 		{
 			continue;
 		}
-        
+		
         bool ruleL {};
         if (m_l)
         {
@@ -1248,7 +1250,7 @@ void Rule::execute(StudentsList& students)
         }
         
         bool ruleGender {};
-        if (m_allowDiffGender) //允许异性为true直接通过
+        if (m_allowDiffGender || tempId < k_idReserver) //允许异性为true直接通过
         {
             ruleGender = true;
         }
